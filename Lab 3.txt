@@ -104,8 +104,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
     //Circle Creation
     vec4 objects[MAX_OBJECTS];
-    objects[0] = vec4(ndc, .1, 1.0);
-    //objects[1] = vec4(vec2(ndc.x, -100), 100.0, 1.0);
+    objects[0] = vec4(ndc, 1.0, .5);
+    objects[1] = vec4(vec2(ndc.x, -100), 100.0, 1.0);
     // ray
     vec4 rayDirection, rayOrigin;
 
