@@ -119,15 +119,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     //normal vector of an object
     vec4 normal;
     vec4 rayAtTime;
+    
+    //hit flag for indivivual pixel
+    bool hit;
 
     // color
     for(int i = MAX_OBJECTS -1 ; i >=0; i--){
         if(hitCircle(rayDirection, rayOrigin, objects[i], time, rayAtTime, normal)){
      		fragColor = calcCircleColor(rayDirection, rayOrigin, objects[i], normal);
+            hit = true;
         }
-        else{
-        	fragColor = vec4(0.0);
-        }
+
+    }
+    if (!hit){
+      	fragColor = vec4(0.0);
     }
 
     //TEST COLOR:
