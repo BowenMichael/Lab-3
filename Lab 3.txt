@@ -44,49 +44,47 @@ void calcRay(out vec4 rayDirection, out vec4 rayOrigin,
     rayDirection = vec4(viewport.x, viewport.y, -focalLength, 0.0);
 }
 
-
-float hit(in vec4 rayDirection, in vec4 rayOrigin, in vec4 object){
-    float tMax = 100.0;
-    float tMin = 0.0;
-    vec3 oc = rayOrigin.xyw - object.xyw;
-    float a = dot(rayDirection, rayDirection);
-    float halfB = dot(oc.xy, rayDirection.xy);
-    float c =  pow(length(oc),2.0) - pow(object.z, 2.0);
-    float discriminant = pow(halfB, 2.0) - a*c;
-    
-   
-    if(discriminant > 0.0){ 
-        float root = sqrt(discriminant);
-      	float temp = (-halfB - root)/a;
-        if (temp < tMax && temp > tMin) {
-            return temp;
-        }
-        temp = (-halfB + root)/a;
-        if (temp < tMax && temp > tMin) {
-            return temp;
-        }
-    }
-    return -1.0;
-    /*float oc = distance(rayDirection.xy, object.xy);
-    if(oc > object.z){
-        return false;
-    }
-    else{
-    	return true;
-    }*/
+vec4 rayAt(in vec4 rayDirection, in vec4 rayOrigin ,float t){
+	return rayOrigin + (t*rayDirection);
 }
+
+vec4 setFaceNormal(in vec4 rayDirection, in vec4 outwardNormal){
+	return dot(rayDirection, outwardNormal) < 0.0 ? outwardNormal : -outwardNormal;
+}
+
+    
+
+bool hitCircle(in vec4 rayDirection, in vec4 rayOrigin, in vec4 obj, out float timeOfHit, out vec4 rayAtTime, out vec4 outwardNormal){
+	vec4 oc = vec4((rayOrigin.xyz - obj.xyz), 0.0);
+    float a = dot(rayDirection, rayDirection);
+    float halfB = dot(oc, rayDirection);
+    float c =  dot(oc, oc) - obj.w * obj.w;
+    float d = halfB * halfB - a*c;
+    if(d > 0.0){ 
+        float root = sqrt(d);
+        float tMax = 100.0;
+    	float tMin = 0.0;
+        timeOfHit = (-halfB - root)/a;
+    	timeOfHit = (timeOfHit < tMax && timeOfHit > tMin) ? timeOfHit : (-halfB + root)/a;
+
+        rayAtTime = rayAt(rayDirection, rayOrigin, timeOfHit);
+        vec4 normal = (rayAtTime - obj) / obj.w;
+        outwardNormal = setFaceNormal(rayDirection, normal);
+        return true;
+    
+    }
+    return false;
+}
+
 
 // calcColor: calculate the color of a pixel given a ray
 //    rayDirection: input ray direction
 //    rayOrigin:    input ray origin
-vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin, in float hit, in vec4 object)
+vec4 calcCircleColor(in vec4 rayDirection, in vec4 rayOrigin, in vec4 object, in vec4 normal)
 {   
-    
-    if(hit >= 0.0){
-        vec4(1.0/distance(rayDirection.xy, object.xy));
-    }
-    return vec4(vec3(.5), 1.0);
+     return normal;
 }
+   
 
 // mainImage: process the current pixel (exactly one call per pixel)
 //    fragColor: output final color for current pixel
@@ -104,8 +102,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 
     //Circle Creation
     vec4 objects[MAX_OBJECTS];
-    objects[0] = vec4(ndc, 1.0, .5);
-    objects[1] = vec4(vec2(ndc.x, -100), 100.0, 1.0);
+    objects[0] = vec4(viewport.x/2.0, viewport.y/2.0, 1.0, .5);
+    objects[1] = vec4(viewport.x/2.0, -100.0, 1.0, 100.0);
     // ray
     vec4 rayDirection, rayOrigin;
 
@@ -114,12 +112,21 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
                  viewportHeight, fragCoord, iResolution.xy);
     calcRay(rayDirection, rayOrigin,
             viewport, focalLength);
+    
+    //Calculating the ray at a specific time
+    float discriminate, time; 
+    
+    //normal vector of an object
+    vec4 normal;
+    vec4 rayAtTime;
 
     // color
     for(int i = MAX_OBJECTS -1 ; i >=0; i--){
-        float hit = hit(rayDirection, rayOrigin, objects[i]);
-        if(hit >= 0.0){
-     		fragColor = calcColor(rayDirection, rayOrigin, hit, objects[i]);
+        if(hitCircle(rayDirection, rayOrigin, objects[i], time, rayAtTime, normal)){
+     		fragColor = calcCircleColor(rayDirection, rayOrigin, objects[i], normal);
+        }
+        else{
+        	fragColor = vec4(0.0);
         }
     }
 
