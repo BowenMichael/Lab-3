@@ -85,8 +85,8 @@ bool hitCircle(in vec4 rayDirection, in vec4 rayOrigin, in vec4 obj, out float t
 //    rayOrigin:    input ray origin
 vec4 calcCircleColor(in vec4 rayDirection, in vec4 rayOrigin, in vec4 object, in vec4 normal)
 {   
-    return vec4(1.0); 
-    //return .5 *( normal + vec4(1.0));
+    //return vec4(1.0); 
+    return .5 *( normal + vec4(1.0));
     //return normal;
 }
    
@@ -109,30 +109,42 @@ vec4 writeColor(in vec4 pixelColor, in int samplesPerPixel){
 
     // Write the translated [0,255] value of each color component.
     return vec4(clamp(r, 0.0, 1.0), clamp(g, 0.0, 1.0), clamp(b, 0.0, 1.0), 1.0);
+    //return vec4(r, g, b, 1.0);
 }
 
-vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin, in vec4 obj, inout bool hit)
+vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin, inout bool hit)
 {
-        
+    const int MAX_OBJECTS = 5;
+    vec4 objects[MAX_OBJECTS];
+    objects[1] = vec4(vec3(0.0, 0.0, iTime), .5);
+    objects[0] = vec4(vec3(0.0, 100.5, 41.0), 100.0);
+    
     //Calculating the ray at a specific time
     float discriminate, time;
     
     //normal vector of an object
     vec4 normal;
     vec4 rayAtTime;
+    vec4 temp;
     
     //hit flag for indivivual pixel
-
-	if(hitCircle(rayDirection, rayOrigin, obj, time, rayAtTime, normal)){
-     		return calcCircleColor(rayDirection, rayOrigin, obj, normal);
+    for(int i = MAX_OBJECTS - 1 ; i >=0; --i){
+        if(hitCircle(rayDirection, rayOrigin, objects[i], time, rayAtTime, normal)){
+            return calcCircleColor(rayDirection, rayOrigin, objects[i], normal);    
             hit = true;
 
+        }
     }
-    if (!hit){
-      	return calcBackround(rayDirection);
+    if(!hit){
+        return calcBackround(rayDirection);
     }
+
+    
+    
 }
 
+//Random Code generator from https://www.shadertoy.com/view/ltB3zD
+//Created by dcerisano
 const float PHI = 1.61803398874989484820459; // Φ = Golden Ratio 
 
 float rand(in vec2 xy, in float seed)
@@ -145,8 +157,8 @@ float rand(in vec2 xy, in float seed)
 //    fragCoord: input location of current pixel in image (in pixels)
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
-    const int MAX_OBJECTS = 5;
-    const int SAMPLES_PER_PIXEL = 100;
+
+    const int SAMPLES_PER_PIXEL = 50;
     float oc;
 
     
@@ -156,9 +168,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     const float viewportHeight = 2.0, focalLength = 1.0;
 
     //Circle Creation
-    vec4 objects[MAX_OBJECTS];
-    objects[0] = vec4(vec3((viewport.x/2.0) + cos(iTime), (viewport.y/2.0) + sin(iTime), 1.0 +iTime/2.0 ), .5);
-    objects[1] = vec4(vec3(cos(iTime*iTime), 100.5, 41.0), 100.0);
+
+    //objects[0] = vec4(vec3(uv, 1.0+iTime), .5);
+
     // ray
     vec4 rayDirection, rayOrigin;
 
@@ -174,25 +186,35 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
     // color
     
     
-    /*for(int i = MAX_OBJECTS - 1 ; i >=0; --i){// Working
+    /*for(int i = MAX_OBJECTS - 1 ; i >=0; --i){// Working to output without antialiansing
         fragColor = calcColor(rayDirection, rayOrigin, objects[i], hit);
     }*/
     
-        //pixelColor += fragColor;
-    for(int j = SAMPLES_PER_PIXEL - 1; j >=0; --j){ //Not Working
-            float u = (fragCoord.x + rand(vec2(0.0, 1.0), length(fragCoord))) / (viewport.x - 1.0); //the x poisition on the screen converted to be between 0 and 1
-			float v = (fragCoord.y + rand(vec2(0.0, 1.0), length(fragCoord))) / (viewport.y - 1.0); //the y poisition on the screen converted to be between 0 and 1
-				
-            rayDirection = (rayOrigin - vec4(viewport.x / 2.0,0.0,0.0,0.0) - vec4(0.0, viewport.y / 2.0, 0.0,0.0) - vec4(0.0, 0.0, focalLength, 0.0)) + u * viewport.x + v * viewport.y - rayOrigin; 
-            //rayDirection.y += (fragCoord.y + rand(fragCoord)) / (viewport.y-1.0); 
-        	pixelColor += calcColor(rayDirection, rayOrigin, objects[0], hit);
-     }
+    /*for(int j = SAMPLES_PER_PIXEL -1; j >=0; --j){
+        rayDirection.x += rand(vec2(1.0, -1.0), length(fragCoord));
+    	//fragColor = calcColor(rayDirection, rayOrigin, objects[1], hit);
+        pixelColor += calcColor(rayDirection, rayOrigin, objects[0], hit);
+    }
+  
+    fragColor = writeColor(pixelColor, SAMPLES_PER_PIXEL);*/
+    //fragColor = vec4(vec3(rand(vec2(1000.0,0.0), length(fragCoord))),1.0);
     
-     
-      	//pixelColor += calcBackround(rayDirection);
-        //fragColor = calcBackround(rayDirection);
+        //pixelColor += fragColor;
 
-   fragColor = writeColor(pixelColor, SAMPLES_PER_PIXEL);
+    for(int j = SAMPLES_PER_PIXEL - 1; j >=0; --j){ //WORKING!!!!!!!
+        float newX = fragCoord.x + rand(vec2(1.0, 0.0), length(fragCoord)+float(j)); //the x poisition on the screen converted to be between 0 and 1
+        float newY = fragCoord.y + rand(vec2(1.0, 0.0), length(fragCoord)+float(j+1)); //the y poisition on the screen converted to be between 0 and 1
+
+        calcViewport(viewport, ndc, uv, aspect, resolutionInv,
+                     viewportHeight, vec2(newX,newY), iResolution.xy);
+        calcRay(rayDirection, rayOrigin,
+                viewport, focalLength);	
+
+        pixelColor += calcColor(rayDirection, rayOrigin, hit);
+    }
+    		
+
+    fragColor = writeColor(pixelColor, SAMPLES_PER_PIXEL);
 
     //TEST COLOR:
     // -> what do the other things calculated above look like?
