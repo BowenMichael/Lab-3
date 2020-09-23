@@ -1,5 +1,14 @@
 #define FLT_MAX 3.402823466e+38
 
+//Random Code generator from https://www.shadertoy.com/view/ltB3zD
+//Created by dcerisano
+const float PHI = 1.61803398874989484820459; // Φ = Golden Ratio 
+
+float rand(in vec2 xy, in float seed)
+{
+    return fract(tan(distance(xy*PHI, xy)*seed)*xy.x);
+}
+
 // calcViewport: calculate the viewing plane (viewport) coordinate
 //    viewport:       output viewing plane coordinate
 //    ndc:            output normalized device coordinate
@@ -85,8 +94,9 @@ bool hitCircle(in vec4 rayDirection, in vec4 rayOrigin, in vec4 obj, out float t
 //    rayOrigin:    input ray origin
 vec4 calcCircleColor(in vec4 rayDirection, in vec4 rayOrigin, in vec4 object, in vec4 normal)
 {   
-    //return vec4(1.0); 
-    return .5 *( normal + vec4(1.0));
+    //return vec4(1.0);
+    
+    return .5 * (normal + vec4(1.0));
     //return normal;
 }
    
@@ -112,13 +122,25 @@ vec4 writeColor(in vec4 pixelColor, in int samplesPerPixel){
     //return vec4(r, g, b, 1.0);
 }
 
-vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin, inout bool hit)
+vec4 randomInUnitSphere(in vec2 fragCoord) {
+    while (true) {
+        float rnd = rand(vec2(1.0, -1.0), length(fragCoord));
+        vec4 p = vec4(rnd);
+        if (dot(p,p) >= 1.0) continue;
+        return p;
+    }
+}
+
+vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin, inout bool hit, in vec2 fragCoord, in int depth)
 {
+    //if(depth <= 0){
+    //	return vec4(0.0);
+    //}
     const int MAX_OBJECTS = 5;
     vec4 objects[MAX_OBJECTS];
-    objects[1] = vec4(vec3(0.0, 0.0, iTime), .5);
+    objects[1] = vec4(vec3(cos(iTime), 1.0,  3.0 + sin(iTime)), .5);
     objects[0] = vec4(vec3(0.0, 100.5, 41.0), 100.0);
-    
+
     //Calculating the ray at a specific time
     float discriminate, time;
     
@@ -127,10 +149,14 @@ vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin, inout bool hit)
     vec4 rayAtTime;
     vec4 temp;
     
+    
+    
     //hit flag for indivivual pixel
     for(int i = MAX_OBJECTS - 1 ; i >=0; --i){
         if(hitCircle(rayDirection, rayOrigin, objects[i], time, rayAtTime, normal)){
-            return calcCircleColor(rayDirection, rayOrigin, objects[i], normal);    
+            //vec4 target = rayAtTime + normal + randomInUnitSphere(fragCoord);
+            //return .5 * calcColor(target-rayAtTime, rayAtTime, hit, fragCoord, depth -1);
+            return calcCircleColor(rayDirection, rayOrigin, objects[i], normal);
             hit = true;
 
         }
@@ -143,21 +169,14 @@ vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin, inout bool hit)
     
 }
 
-//Random Code generator from https://www.shadertoy.com/view/ltB3zD
-//Created by dcerisano
-const float PHI = 1.61803398874989484820459; // Φ = Golden Ratio 
 
-float rand(in vec2 xy, in float seed)
-{
-    return fract(tan(distance(xy*PHI, xy)*seed)*xy.x);
-}
 
 // mainImage: process the current pixel (exactly one call per pixel)
 //    fragColor: output final color for current pixel
 //    fragCoord: input location of current pixel in image (in pixels)
 void mainImage(out vec4 fragColor, in vec2 fragCoord)
 {
-
+	const int MAX_DEPTH = 50;
     const int SAMPLES_PER_PIXEL = 50;
     float oc;
 
@@ -210,7 +229,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
         calcRay(rayDirection, rayOrigin,
                 viewport, focalLength);	
 
-        pixelColor += calcColor(rayDirection, rayOrigin, hit);
+        pixelColor += calcColor(rayDirection, rayOrigin, hit, fragCoord, MAX_DEPTH);
     }
     		
 
