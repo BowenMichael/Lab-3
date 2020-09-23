@@ -133,8 +133,11 @@ vec4 calcColor(in vec4 rayDirection, in vec4 rayOrigin, in vec4 obj, inout bool 
     }
 }
 
-float rand(vec2 co){
-    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+const float PHI = 1.61803398874989484820459; // Φ = Golden Ratio 
+
+float rand(in vec2 xy, in float seed)
+{
+    return fract(tan(distance(xy*PHI, xy)*seed)*xy.x);
 }
 
 // mainImage: process the current pixel (exactly one call per pixel)
@@ -169,18 +172,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord)
 	vec4 pixelColor = vec4(0.0);
     bool hit;
     // color
-    for(int i = MAX_OBJECTS - 1 ; i >=0; --i){
-        //fragColor = calcColor(rayDirection, rayOrigin, objects[i], hit);
+    
+    
+    /*for(int i = MAX_OBJECTS - 1 ; i >=0; --i){// Working
+        fragColor = calcColor(rayDirection, rayOrigin, objects[i], hit);
+    }*/
+    
         //pixelColor += fragColor;
-        for(int j = SAMPLES_PER_PIXEL - 1; j >=0; --j){
-            float u = (fragCoord.x + rand(fragCoord)) / (viewport.x - 1.0); //the x poisition on the screen converted to be between 0 and 1
-			float v = (fragCoord.y + rand(fragCoord)) / (viewport.y - 1.0); //the y poisition on the screen converted to be between 0 and 1
+    for(int j = SAMPLES_PER_PIXEL - 1; j >=0; --j){ //Not Working
+            float u = (fragCoord.x + rand(vec2(0.0, 1.0), length(fragCoord))) / (viewport.x - 1.0); //the x poisition on the screen converted to be between 0 and 1
+			float v = (fragCoord.y + rand(vec2(0.0, 1.0), length(fragCoord))) / (viewport.y - 1.0); //the y poisition on the screen converted to be between 0 and 1
 				
-            rayDirection = vec4(uv, focalLength, 1.0) + u * viewport.x + v * viewport.y - rayOrigin; 
+            rayDirection = (rayOrigin - vec4(viewport.x / 2.0,0.0,0.0,0.0) - vec4(0.0, viewport.y / 2.0, 0.0,0.0) - vec4(0.0, 0.0, focalLength, 0.0)) + u * viewport.x + v * viewport.y - rayOrigin; 
             //rayDirection.y += (fragCoord.y + rand(fragCoord)) / (viewport.y-1.0); 
-        	pixelColor += calcColor(rayDirection, rayOrigin, objects[i], hit);
-        }
-    }
+        	pixelColor += calcColor(rayDirection, rayOrigin, objects[0], hit);
+     }
+    
      
       	//pixelColor += calcBackround(rayDirection);
         //fragColor = calcBackround(rayDirection);
